@@ -1,42 +1,100 @@
 ﻿using UnityEngine;
 
+/// <summary>
+/// MapUnits assume that their parent is a map controller.
+/// </summary>
 public class MapUnit : MonoBehaviour
 {
     [SerializeField] public SpriteRenderer spriteHighlight;
     [SerializeField] public Color startHighlightColor;
     [SerializeField] public Color destinationHighlightColor;
+    [SerializeField] public int startingMoves = 7;
     private const int INFINITY_DISTANCE = 100;
-    public GameObject[] neighbors = new GameObject[4];
+    public MapUnit[] neighbors = new MapUnit[4];
     public bool visited = false;
     public bool wall = true;
-    public int col;
-    public int row;
-    public int startingMoves = 7;
     public int currentDistance = INFINITY_DISTANCE;
 
+    /// <summary>
+    /// when mouse button press happens, if this tile is not part of an
+    /// existing distance interaction, then we start a new distance
+    /// interaction.
+    /// </summary>
     public void OnMouseDown()
     {
-        Propagate(startingMoves);
+        if (currentDistance == INFINITY_DISTANCE)
+        {
+            GetComponentInParent<MapController>().ResetMap();
+            Propagate(startingMoves);
+        }
     }
 
-    public void OnMouseOver()
+    /// <summary>
+    /// when mouse enters this tile, we either set a mouse over highlight
+    /// if the user has not selected a starting tile yet or we highlight the
+    /// path from this tile if they do have a starting tile in range.
+    /// </summary>
+    public void OnMouseEnter()
     {
-        Debug.Log("OnMouseOVer");
+        GetComponentInParent<MapController>().ResetHighlights();
         if (currentDistance == INFINITY_DISTANCE)
         {
             spriteHighlight.color = startHighlightColor;
         }
         else
         {
-            spriteHighlight.color = destinationHighlightColor;
+            HighlightPath();
+        }
+    }
+    
+    /// <summary>
+    /// Sets a highlight color on each tile involved in pathing to this one.
+    /// </summary>
+    public void HighlightPath()
+    {
+        if (wall == true || currentDistance == INFINITY_DISTANCE)
+        {
+            return;
+        }
+        spriteHighlight.color = destinationHighlightColor;
+        foreach (MapUnit neighbor in neighbors)
+        {
+            if (neighbor == null)
+            {
+                continue;
+            }
+            if (neighbor.currentDistance == (currentDistance - 1))
+            {
+                neighbor.HighlightPath();
+                break;
+            }
         }
     }
 
-    public void OnMouseExit()
+    /// <summary>
+    /// clear the number representing distance from most recently clicked tile
+    /// </summary>
+    public void ResetDistance()
+    {
+        currentDistance = INFINITY_DISTANCE;
+        gameObject.GetComponentInChildren<TextMesh>().text = "";
+    }
+    
+    /// <summary>
+    /// Resets the highlight.
+    /// </summary>
+    public void ResetHighlight()
     {
         spriteHighlight.color = Color.clear;
     }
 
+    /// <summary>
+    /// when an initial tile is selected, we show the number of moves to each tile in range.
+    /// I opted to show all the moves in range right away as a prompt to help user know where
+    /// to move the mouse, but if we wanted to only show the moves numbers for the active path 
+    /// we could just wait and not set the text mesh until the highlights are applied.
+    /// </summary>
+    /// <param name="movesLeft">Moves left.</param>
     public void Propagate(int movesLeft)
     {
         if (wall == true)
@@ -51,11 +109,11 @@ public class MapUnit : MonoBehaviour
         {
             currentDistance = startingMoves - movesLeft;
             gameObject.GetComponentInChildren<TextMesh>().text = " " + currentDistance.ToString();
-            for (int i = 0; i < neighbors.Length; i++)
+            foreach (MapUnit neighbor in neighbors)
             {
-                if (neighbors[i] != null)
+                if (neighbor != null)
                 {
-                    neighbors[i].GetComponent<MapUnit>().Propagate(movesLeft - 1);
+                    neighbor.Propagate(movesLeft - 1);
                 }
             }
         }

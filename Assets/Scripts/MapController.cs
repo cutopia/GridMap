@@ -9,9 +9,11 @@ public class MapController : MonoBehaviour {
     [SerializeField] public Color wallColor;
     [SerializeField] public Color pathColor;
     [SerializeField] public int smoothIterations = 5;
-    GameObject[,] gameMap;
+    MapUnit[,] gameMap;
     
-	// Use this for initialization
+	/// <summary>
+    /// Create the map of tiles on start
+    /// </summary>
 	void Start () {
         InitializeGameMap();
         LinkMap();
@@ -28,7 +30,7 @@ public class MapController : MonoBehaviour {
         {
             for (int row = 0; row < height; row++)
             {
-                var tileInfo = gameMap[col, row].GetComponent<MapUnit>();
+                var tileInfo = gameMap[col, row];
                 if (row - 1 >= 0)
                 {
                     tileInfo.neighbors[0] = gameMap[col, row - 1];
@@ -48,13 +50,37 @@ public class MapController : MonoBehaviour {
             }
         }
     }
+    
+    /// <summary>
+    /// Resets the numbers shown on the map representing move distances.
+    /// </summary>
+    public void ResetMap()
+    {
+        MapUnit[] allChildren = GetComponentsInChildren<MapUnit>();
+        foreach (MapUnit m in allChildren)
+        {
+            m.ResetDistance();
+        }
+    }
+    
+    /// <summary>
+    /// Reset the highlight color of all map units
+    /// </summary>
+    public void ResetHighlights()
+    {
+        MapUnit[] allChildren = GetComponentsInChildren<MapUnit>();
+        foreach (MapUnit m in allChildren)
+        {
+            m.ResetHighlight();
+        }
+    }
 
     /// <summary>
     /// Initializes the game map.
     /// </summary>
     void InitializeGameMap()
     {
-        gameMap = new GameObject[width, height];
+        gameMap = new MapUnit[width, height];
         for (int col = 0; col < width; col++)
         {
             for (int row = 0; row < height; row++)
@@ -62,12 +88,8 @@ public class MapController : MonoBehaviour {
                 GameObject tile = Instantiate(mapTilePrefab) as GameObject;
                 tile.transform.position = new Vector3(col, row, 0);
                 tile.GetComponent<SpriteRenderer>().color = wallColor;
-                var tileInfo = tile.GetComponent<MapUnit>();
-                // helpful for figuring out who got clicked later.
-                tileInfo.col = col;
-                tileInfo.row = row;
                 tile.transform.SetParent(transform);
-                gameMap[col, row] = tile;
+                gameMap[col, row] = tile.GetComponent<MapUnit>();
             }
         }
     }
@@ -84,11 +106,11 @@ public class MapController : MonoBehaviour {
             {
                 for (int row = 0; row < height; row++)
                 {
-                    if (gameMap[col, row].GetComponent<MapUnit>().wall)
+                    if (gameMap[col, row].wall)
                     {
                         if (GetWallNeighbors(col, row) == 1)
                         {
-                            gameMap[col, row].GetComponent<MapUnit>().wall = false;
+                            gameMap[col, row].wall = false;
                             gameMap[col, row].GetComponent<SpriteRenderer>().color = pathColor;
                         }
                     }
@@ -114,7 +136,7 @@ public class MapController : MonoBehaviour {
                 {
                     continue;
                 }
-                if (gameMap[col, row].GetComponent<MapUnit>().wall)
+                if (gameMap[col, row].wall)
                 {
                     total++;
                 }
@@ -130,7 +152,7 @@ public class MapController : MonoBehaviour {
     /// <param name="row">Row.</param>
     void GenerateMap(int col, int row)
     {
-        var tileInfo = gameMap[col, row].GetComponent<MapUnit>();
+        var tileInfo = gameMap[col, row];
         gameMap[col, row].GetComponent<SpriteRenderer>().color = pathColor;
         tileInfo.visited = true;
         tileInfo.wall = false;
@@ -141,7 +163,7 @@ public class MapController : MonoBehaviour {
             int[] chosenDir = validDirs[Random.Range(0, validDirs.Count)];
             int nextCol = (int)((chosenDir[0] + col) * 0.5);
             int nextRow = (int)((chosenDir[1] + row) * 0.5);
-            gameMap[nextCol, nextRow].GetComponent<MapUnit>().wall = false;
+            gameMap[nextCol, nextRow].wall = false;
             gameMap[nextCol, nextRow].GetComponent<SpriteRenderer>().color = pathColor;
             GenerateMap(chosenDir[0], chosenDir[1]);
             validDirs = GetValidDirs(col, row);
@@ -157,19 +179,19 @@ public class MapController : MonoBehaviour {
     List<int[]> GetValidDirs(int col, int row)
     {
         List<int[]> validDirs = new List<int[]>();
-        if ((col - 2 >= 0) && !gameMap[col - 2, row].GetComponent<MapUnit>().visited)
+        if ((col - 2 >= 0) && !gameMap[col - 2, row].visited)
         {
             validDirs.Add(new int[] { col - 2, row });
         }
-        if ((col + 2 < width) && !gameMap[col + 2, row].GetComponent<MapUnit>().visited)
+        if ((col + 2 < width) && !gameMap[col + 2, row].visited)
         {
             validDirs.Add(new int[] { col + 2, row });
         }
-        if ((row - 2 >= 0) && !gameMap[col, row - 2].GetComponent<MapUnit>().visited)
+        if ((row - 2 >= 0) && !gameMap[col, row - 2].visited)
         {
             validDirs.Add(new int[] { col, row - 2 });
         }
-        if ((row + 2 < height) && !gameMap[col, row + 2].GetComponent<MapUnit>().visited)
+        if ((row + 2 < height) && !gameMap[col, row + 2].visited)
         {
             validDirs.Add(new int[] { col, row + 2 });
         }
